@@ -1,0 +1,648 @@
+
+[===============================================================================
+SPECFILENAME: COLLECTION.SUMMARY
+
+SHORTDESC:  
+     OnDemand HTML that collects information from account, share, loan and 
+     collection fields for a quick summary or for employees who do not have access 
+     to collection manager.
+
+DETAILS: 
+     Includes information relevant to 
+        Accounts:  	account opening, address, DOB, phone numbers, employer, warnings and comments 
+        Shares:    	share balances and warnings
+        Loans:     	loan balances, loan limits, open date, payment information, loan warnings
+        Cards:     	plastic card numbers, status
+        Collections: collector information, last worked date, next work date, and the last 60 days comments 
+                        entered in the collection manager notes
+        Tracking Rcd:   Uses account tracking record 30 to pull bankruptcy information
+
+Sections are identified and can be bracketed out if not used at your credit union                         
+
+CUSTOMIZATION: (requires knowledge of credit union parameters and some PowerOn skills to modify code)
+
+     Collector notes limited to first 15 lines of each comment dated in the last 60 days in order
+        to give a good summary without slowing things down.  This can also be changed.
+
+     Collector information section uses CPWORKCARD:LASTCOLLECTORID field to match collector name to ID field and display the 
+        name of the collector instead of the ID.  Must be customized to your credit union or bracketed out by adding brackets before and after section code.
+
+     Account Tracking Record 30 is used for bankruptcy information and should be changed to the tracking record used by your
+        credit union.  Fields pulled from the tracking record should also be adjusted.  This section
+        can be removed if bankruptcy tracking records are not used at your credit union by adding brackets before and after section code.
+
+
+REVISIONDATE: April 2015 
+PROGRAMMER:   E McDonner, Eagle LA Federal Credit Union
+REVSUMMARY:   Initial program creation
+
+INITIATEDBY:  Demand
+RUNINFO:      Run from Account Manager or Teller Transactions
+
+INSTALL:      This specfile must be installed for demand use.
+SPECIALKEY:   WINDOWS
+TARGETFILE:   ACCOUNT
+
+
+REVISIONDATE: August 7, 2015
+PROGRAMMER:   E McDonner, Eagle LA Federal Credit Union
+              Made recommended changes to use RD.GETDATA.DEF instead of LOADWARNINGTABLE to populate warnings. 
+INCLUDEFILES: RD.GETDATA.DEF             Pulls in warning codes from parameters. 
+
+=============================================
+]
+
+WINDOWS
+
+TARGET=ACCOUNT
+
+DEFINE
+ QUOTE=CHARACTER(1)
+ FOUND=NUMBER
+ WARNCOUNTER=NUMBER 
+ TRUE=1
+ FALSE=0
+ #INCLUDE "RD.GETDATA.DEF"
+END
+
+SETUP
+ QUOTE=CTRLCHR(34)
+END
+
+PRINT TITLE="COLLECTSUMMARY"
+ HTMLVIEWOPEN(0)
+
+
+ HTMLVIEWLINE("<head>")
+ HTMLVIEWLINE("</head>")
+ HTMLVIEWLINE("<body  bgcolor=#E0FFFF>")
+ HTMLVIEWLINE("<h1>Collection  Summary</h1>")
+
+
+[START MEMBER INFORMATION SECTION]
+
+ HTMLVIEWLINE("<font  size=5><u>Member  Information</u></font></b>")                               
+ HTMLVIEWLINE("<table  width=60% border=0>")
+ HTMLVIEWLINE("  <tr>")
+ HTMLVIEWLINE("    <td  width=33%><font size=4>Member  Name:"+"   " +NAME:SHORTNAME)
+ HTMLVIEWLINE("       </font></td>")
+ 
+ HTMLVIEWLINE("    <td  width=33%><font size=4>Acct  Number:   "+"   "  +ACCOUNT:NUMBER)
+ HTMLVIEWLINE("       </font></td>")
+ HTMLVIEWLINE("    <td  width=33%><font size=4>Branch:    "+"   " +FORMAT ("##",ACCOUNT:BRANCH))
+ HTMLVIEWLINE("       </font></td>")
+ HTMLVIEWLINE("  </tr>")
+ HTMLVIEWLINE("  <tr>")
+ HTMLVIEWLINE("    <td  width=33%><font  size=4>Address:   " +"    "+NAME:STREET)
+ HTMLVIEWLINE("        </font></td>")
+ HTMLVIEWLINE("    <td  width=33%><font size=4>City:    "+"   " +NAME:CITY)
+ HTMLVIEWLINE("        </font></td>")
+ HTMLVIEWLINE("    <td  width=33%><font size=4>State:    "+"   " +NAME:STATE)
+ HTMLVIEWLINE("        </font></td>")
+ HTMLVIEWLINE("  </tr>")
+ HTMLVIEWLINE("  <tr></tr>")
+
+ HTMLVIEWLINE("  <tr>")
+ HTMLVIEWLINE("    <td  width=33%><font  size=4>Employer:   "  +NAME:EMPLOYERNAME)
+ HTMLVIEWLINE("       </font></td>")
+ HTMLVIEWLINE("    <td  width=33%><font size=4>Date of  Birth:    " +FORMAT ("##/##/####",NAME:BIRTHDATE))
+ HTMLVIEWLINE("       </font></td>")
+ HTMLVIEWLINE("    <td  width=33%><font size=4>Account Open Date:   " +FORMAT ("##/##/####",ACCOUNT:OPENDATE)) 
+ HTMLVIEWLINE("       </font></td>")
+ HTMLVIEWLINE("  </tr>")
+ HTMLVIEWLINE("  <tr>")
+
+
+[END MEMBER INFORMATION SECTION]
+
+
+[ACCOUNT WARNINGS]
+
+
+FOR WARNCOUNTER = 1 TO 20
+DO
+  IF ACCOUNT:WARNINGCODE:(WARNCOUNTER) > 0 THEN
+   DO
+    HTMLVIEWLINE("  <tr>")
+    HTMLVIEWLINE("    <td colspan=3><font color=red size=4>Warning:  "  + GETDATACHARACTER(GETPARAMWARNING,ACCOUNT:WARNINGCODE:(WARNCOUNTER)))
+    HTMLVIEWLINE("  </font></td></tr> ") 
+   END
+END
+
+[END ACCOUNT WARNINGS]
+
+
+[START ACCOUNT COMMENTS]
+ 
+                                                                       
+FOR EACH COMMENT WITH COMMENT:TYPE>-1
+DO
+ HTMLVIEWLINE("  <tr>")
+ HTMLVIEWLINE("    <td  colspan=3><font color=blue size=4>Comment:  " +COMMENT:COMMENT)                             
+ HTMLVIEWLINE(" </font></td >")
+ HTMLVIEWLINE("  </tr>")
+END 
+ HTMLVIEWLINE("  </table>")
+
+
+[END ACCOUNT COMMENTS]
+
+[ HTMLVIEWLINE("<br><br>")]
+
+
+[START BANKRUPTCY TRACKING INFORMATION:  Uses Account tracking record #30 with USER fields
+predefined by credit union.  Use brackets to ignore code or can re-label fields and tracking                                                                                                  record used by your credit union.]
+
+
+
+FOR EACH TRACKING WITH TRACKING:TYPE=30
+ DO
+  HTMLVIEWLINE("<br><br>")
+  HTMLVIEWLINE("<font  size=5><u>Bankruptcy Tracking Record</u></font>")                                      
+  HTMLVIEWLINE("<table  width=60% border=0>")
+  HTMLVIEWLINE("  <tr>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Type Filed: Ch "+FORMAT("####",TRACKING:USERCODE1))
+  HTMLVIEWLINE("       </font></td>")
+ 
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Date Filed   "+"   "  +FORMAT("99/99/99",TRACKING:USERDATE1))
+  HTMLVIEWLINE("       </font></td>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Case #    "+"   " +TRACKING:USERCHAR6)
+  HTMLVIEWLINE("       </font></td>")
+  HTMLVIEWLINE("  </tr>")
+  HTMLVIEWLINE("  <tr>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Attorney: "+TRACKING:USERCHAR2)
+  HTMLVIEWLINE("       </font></td>")
+ 
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Attorney Phone: "+TRACKING:USERCHAR5)
+  HTMLVIEWLINE("       </font></td>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>")
+  HTMLVIEWLINE("       </font></td>")
+  HTMLVIEWLINE("  </tr>")
+
+  HTMLVIEWLINE("  <tr>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Trustee: "+TRACKING:USERCHAR11)
+  HTMLVIEWLINE("       </font></td>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Trustee Phone: "+TRACKING:USERCHAR14)
+  HTMLVIEWLINE("       </font></td>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>")
+  HTMLVIEWLINE("       </font></td>")
+  HTMLVIEWLINE("  </tr>")
+
+  HTMLVIEWLINE("  <tr>")
+  HTMLVIEWLINE("    <td colspan=3><font size=4>Notes: "+TRACKING:USERCHAR7)
+  HTMLVIEWLINE("       </font></td></tr>")
+  HTMLVIEWLINE("  <tr>")
+  HTMLVIEWLINE("    <td colspan=3><font size=4>Notes: "+TRACKING:USERCHAR8)
+  HTMLVIEWLINE("       </font></td></tr>")
+ 
+
+  HTMLVIEWLINE("</table>")
+											 
+
+ END
+
+
+[END BANKRUPTCY TRACKING]
+
+
+HTMLVIEWLINE("<br><br>")
+
+
+[START SHARE INFORMATION  SECTION]
+
+HTMLVIEWLINE("<font  size=5><u>Shares</u></font>")                                      
+
+
+
+FOR EACH SHARE WITH  SHARE:CLOSEDATE='--/--/--'
+ DO
+  HTMLVIEWLINE("<table  width=60% border=0>") 
+  HTMLVIEWLINE("  <tr>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Share  #:   " +SHARE:ID)
+  HTMLVIEWLINE("       </font></td>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Share  Type:  " +SHARE:DESCRIPTION)
+  HTMLVIEWLINE("       </font></td>")
+ 
+  IF SHARE:BALANCE<0
+   THEN
+    HTMLVIEWLINE("    <td  width=33%><font size=4  color=red>Share Balance:   -"  +FORMAT ("###,###,##9.99",SHARE:BALANCE))
+    ELSE
+    HTMLVIEWLINE("    <td  width=33%><font size=4>Share  Balance:   " +FORMAT ("###,###,##9.99",SHARE:BALANCE))
+   
+HTMLVIEWLINE("       </td></font></tr>")
+
+
+[END SHARE INFORMATION]
+
+[START SHARE WARNINGS]
+
+
+FOR WARNCOUNTER = 1 TO 20
+DO
+  IF SHARE:WARNINGCODE:(WARNCOUNTER) > 0 THEN
+   DO
+    HTMLVIEWLINE("  <tr>")
+    HTMLVIEWLINE("    <td colspan=3><font color=red size=4>Warning:  "  + GETDATACHARACTER(GETPARAMWARNING,SHARE:WARNINGCODE:(WARNCOUNTER)))
+    HTMLVIEWLINE("  </font> </td>  </tr> ")
+   END
+END
+
+[END SHARE WARNINGS]
+    HTMLVIEWLINE("</table>  ")
+HTMLVIEWLINE("<br>")									    
+
+END
+
+
+[START CARD INFORMATION SECTION  ]
+
+HTMLVIEWLINE("<font  size=5><u>Cards</u></font>")
+FOR EACH CARD WITH  CARD:ISSUEDATE<>'--/--/--'                                                      
+ DO
+
+  HTMLVIEWLINE("<table  width=60% border=0>")
+  HTMLVIEWLINE("  <tr>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Card #:    " +CARD:NUMBER)
+  HTMLVIEWLINE("        </font></td>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Card  Description:    "  +CARD:DESCRIPTION)
+  HTMLVIEWLINE("      </font></td>")
+
+   IF CARD:STATUS=1
+    THEN
+     HTMLVIEWLINE("    <td  width=33%><font size=4  color=red>Status: Issued  " )                       [CHANGE CARD:STATUS TEXT ASSOCIATED WITH NUMBERS IF DIFFERENT]
+    ELSE
+     IF CARD:STATUS=2 
+    THEN
+     HTMLVIEWLINE("    <td  width=33%><font size=4>Status:  Captured  " )
+    ELSE
+     IF CARD:STATUS=0
+    THEN
+     HTMLVIEWLINE("    <td  width=33%><font size=4>Status:  Not Issued  " )
+     HTMLVIEWLINE("        </font></td>")
+ END
+HTMLVIEWLINE("  </tr>")
+HTMLVIEWLINE("</table>")									    
+
+[END CARD INFORMATION]
+
+
+
+HTMLVIEWLINE("<br><br>")
+
+
+[START LOAN INFORMATION SECTION]
+
+HTMLVIEWLINE("<font  size=5><u>Loans</u></font></b> ")                                            
+FOR EACH LOAN WITH  LOAN:CLOSEDATE='--/--/--'
+ DO                                   
+  HTMLVIEWLINE("<table  width=60% border=0>")
+  HTMLVIEWLINE("  <tr>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Loan #:  " +LOAN:ID)
+  HTMLVIEWLINE("        </font></td>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Loan  Desc: " +LOAN:DESCRIPTION)
+  HTMLVIEWLINE("       </font></td>")
+
+ IF LOAN:BALANCE<0
+   THEN
+    HTMLVIEWLINE("    <td  width=33%><font size=4  color=red>Loan Balance:   -"  +FORMAT ("###,###,##9.99",LOAN:BALANCE))
+    ELSE
+    HTMLVIEWLINE("    <td  width=33%><font size=4>Loan Balance:   " +FORMAT ("###,###,##9.99",LOAN:BALANCE))
+
+[  HTMLVIEWLINE("    <td  width=33%><font size=4>Loan  Balance:   " +FORMAT ("#,###,##9.99",LOAN:BALANCE))]
+  HTMLVIEWLINE("        </font></td>")
+  HTMLVIEWLINE("  </tr>")
+ 
+  HTMLVIEWLINE("  <tr>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Limit:  " +FORMAT ("#,###,##9.99",LOAN:CREDITLIMIT))
+  HTMLVIEWLINE("        </font></td>")
+  HTMLVIEWLINE("    <td  width=33%><font  size=4></font></td>")
+  HTMLVIEWLINE("    <td  width=33%><font  size=4></font></td>")
+  HTMLVIEWLINE("  </tr>")
+
+
+  HTMLVIEWLINE("  <tr>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Loan  Open Date:  "+FORMAT ("99/99/99",LOAN:OPENDATE))
+  HTMLVIEWLINE("        </font></td>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Payment  Freq:  " +FORMAT ("######9",LOAN:PAYMENTFREQUENCY))
+  HTMLVIEWLINE("        </font></td>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Payment  Amt:   "+FORMAT ("#,##9.99",LOAN:PAYMENT))
+  HTMLVIEWLINE("           </font></td>")
+  HTMLVIEWLINE("  </tr>")
+
+  HTMLVIEWLINE("  <tr>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4  color=red>DQ Amount:    "+FORMAT ("#,###,##9.99",LOAN:PASTDUEAMOUNT))
+  HTMLVIEWLINE("        </font></td>")
+  HTMLVIEWLINE("    <td  width=33%><font size=4>Last  Pmt Date:  " +FORMAT ("99/99/99",LOAN:LASTPAYMENTDATE))
+  HTMLVIEWLINE("         </font></td>")
+  HTMLVIEWLINE("    <td  width=33%><font  size=4></font>Next Due Date:   "+FORMAT ("99/99/99",LOAN:DUEDATE))
+  HTMLVIEWLINE("        </font></td>")
+  HTMLVIEWLINE("  </tr>")									
+
+[END LOAN INFORMATION SECTION]                                                                                                
+
+
+
+[LOAN WARNINGS]
+
+FOR WARNCOUNTER = 1 TO 20
+DO
+  IF LOAN:WARNINGCODE:(WARNCOUNTER) > 0 THEN
+   DO
+    HTMLVIEWLINE("  <tr>")
+    HTMLVIEWLINE("    <td colspan=3><font color=red size=4>Warning:  "  + GETDATACHARACTER(GETPARAMWARNING,LOAN:WARNINGCODE:(WARNCOUNTER)))
+    HTMLVIEWLINE("  </font> </td>  </tr> ")
+   END
+END
+HTMLVIEWLINE("</table>")
+HTMLVIEWLINE("<br><br>")
+
+
+[END LOAN WARNINGS]
+
+END
+
+[START COLLECTOR RECORDS]
+
+
+HTMLVIEWLINE("<font  size=5><u>Collection  Record</u></font></b>")                                     
+
+FOR EACH CPWORKCARD WITH  CPWORKCARD:TYPE<4
+DO
+ HTMLVIEWLINE("<table  width=60% border=0>")
+ HTMLVIEWLINE("  <tr>")
+
+
+[Uses CPWORKCARD:LASSTCOLLECTORID field to determine name of collector or queue name; input names and collector IDs used at your credit union or bracket out to display numbers only. 		Replace LASTCOLLECTORID=000 and Current Collector: name; where 000 becomes queue number and 	name becomes collector name.  Copy 4 lines to add other collectors or delete those not used.
+
+IF CPWORKCARD:LASTCOLLECTORID=000
+THEN
+HTMLVIEWLINE("    <td  width=33%><font  size=4>Current Collector: name  " )
+HTMLVIEWLINE("        </font></td>")
+
+If you prefer to use only ID number, place open bracket here AND a close bracket where indicated below.]
+
+
+
+IF CPWORKCARD:LASTCOLLECTORID=000
+THEN
+ HTMLVIEWLINE("    <td  width=33%><font  size=4>Current Collector: name  " )
+ HTMLVIEWLINE("        </font></td>")
+
+IF CPWORKCARD:LASTCOLLECTORID=000
+THEN
+ HTMLVIEWLINE("    <td  width=33%><font  size=4>Current Collector: name  " )
+ HTMLVIEWLINE("        </font></td>")
+
+IF CPWORKCARD:LASTCOLLECTORID=000
+THEN
+ HTMLVIEWLINE("    <td  width=33%><font  size=4>Current Collector: name  " )
+ HTMLVIEWLINE("        </font></td>")
+
+
+
+[IF ONE COLLECTOR WORKS MULTIPLE QUEUES, YOU CAN STRING LASTCOLLECTORID=nnn together
+IF CPWORKCARD:LASTCOLLECTORID=000 OR
+   CPWORKCARD:LASTCOLLECTORID=000
+THEN
+ HTMLVIEWLINE("    <td  width=33%><font  size=4>Current Collector: name  " )
+ HTMLVIEWLINE("        </font></td>")       ]
+
+
+[IF YOU PREFER TO USE A QUEUE NAME instead of collector name: 
+
+IF CPWORKCARD:LASTCOLLECTORID=000
+THEN
+ HTMLVIEWLINE("    <td  width=33%><font  size=4>Current Queue: name  " )
+ HTMLVIEWLINE("        </font></td>")
+
+IF CPWORKCARD:LASTCOLLECTORID=000 OR
+   CPWORKCARD:LASTCOLLECTORID=000
+THEN
+ HTMLVIEWLINE("    <td  width=33%><font  size=4>Current Queue: name  " )
+ HTMLVIEWLINE("        </font></td>")
+
+IF CPWORKCARD:LASTCOLLECTORID=000 OR
+   CPWORKCARD:LASTCOLLECTORID=000
+THEN
+ HTMLVIEWLINE("    <td  width=33%><font  size=4>Current Queue: name  " )
+ HTMLVIEWLINE("        </font></td>")                                    
+
+]
+
+
+
+
+[The following section defaults to the queue number if collector ID is not found already.  Enter all queue numbers indentified in the previous code replacing the 000. Remove CPWORKCARD:LASTCOLLECTORID<>000 not used.]
+
+
+
+IF CPWORKCARD:LASTCOLLECTORID<>000 AND
+ CPWORKCARD:LASTCOLLECTORID<>000 AND
+ CPWORKCARD:LASTCOLLECTORID<>000 AND
+ CPWORKCARD:LASTCOLLECTORID<>000 AND
+ CPWORKCARD:LASTCOLLECTORID<>000 AND
+ CPWORKCARD:LASTCOLLECTORID<>000 AND
+ CPWORKCARD:LASTCOLLECTORID<>000 AND
+ CPWORKCARD:LASTCOLLECTORID<>000 AND
+ CPWORKCARD:LASTCOLLECTORID<>000 AND
+ CPWORKCARD:LASTCOLLECTORID<>000
+
+THEN
+
+[If you prefer to use only ID or queue number, place close bracket here.]
+ 
+
+ HTMLVIEWLINE("    <td  width=33%><font  size=4>Current Collector ID:   " +FORMAT ("####",CPWORKCARD:LASTCOLLECTORID))
+ HTMLVIEWLINE("        </font></td>")
+
+
+ HTMLVIEWLINE("    <td  width=33%><font size=4>Last  Work Date:  " +FORMAT ("99/99/99",CPWORKCARD:LASTWORKDATE))
+ HTMLVIEWLINE("        </font></td>")
+ HTMLVIEWLINE("    <td  width=33%><font size=4>Next  Work Date:  "  +FORMAT ("99/99/99",CPWORKCARD:NEXTWORKDATE))
+ HTMLVIEWLINE("        </font></td>")
+ HTMLVIEWLINE("  </tr>")
+END
+
+
+HTMLVIEWLINE("</table>")
+
+
+[COLLECTION NOTES to display more than 15 lines of notes, copy/paste and change the           CPWORKCARD NOTE:TEXT:nn of this code.  Be aware that it takes time to display notes and this may slow down the screen considerably.  Insert after TEXT:15 below changing nn to the next 	TEXT number.
+
+IF CPWORKCARD NOTE:TEXT:nn<>" "
+ THEN
+ HTMLVIEWLINE("  <tr>")
+ HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+ HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+ HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:nn)
+ HTMLVIEWLINE("        </font></td>")
+ HTMLVIEWLINE("  </tr>") 
+]
+
+
+
+HTMLVIEWLINE("<br><br>") HTMLVIEWLINE("<table  width=60% border=0>")
+HTMLVIEWLINE("<font  size=5><u>Collection  Notes</u></font></b>")                                      
+
+HTMLVIEWLINE("<font  size=3><i>First 15 lines of text for notes in last 60 days.  For additional, see collector queue.</i></font></b>")  
+
+FOR EACH CPWORKCARD WITH  CPWORKCARD:TYPE<4
+ DO
+  FOR EACH CPWORKCARD NOTE WITH CPWORKCARD NOTE:ENTERDATE>SYSTEMDATE-60                           [Chooses notes for last 60 days only]
+   DO
+    HTMLVIEWLINE("<table  width=100% border=0>")
+    HTMLVIEWLINE("  <tr>")
+    HTMLVIEWLINE("    <td  width=13%><font size=4>Teller:   " +FORMAT ("####",CPWORKCARD NOTE:USERID))
+    HTMLVIEWLINE("        </font></td>")
+    HTMLVIEWLINE("    <td  width=13%><font size=4>Date:   " +FORMAT ("99/99/99",CPWORKCARD  NOTE:ENTERDATE))
+    HTMLVIEWLINE("        </font></td>")
+    HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:1)
+    HTMLVIEWLINE("        </font></td>")
+    HTMLVIEWLINE("  </tr>")
+    HTMLVIEWLINE("<tr>----------------------------------------------------------------------------------------------------------------------</tr>")
+
+     IF CPWORKCARD NOTE:TEXT:2<>" "
+      THEN
+       HTMLVIEWLINE("  <tr>")
+       HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+       HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+       HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:2)
+       HTMLVIEWLINE("        </font></td>")
+       HTMLVIEWLINE("  </tr>") 
+
+     IF CPWORKCARD NOTE:TEXT:3<>" "
+      THEN
+       HTMLVIEWLINE("  <tr>")
+       HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+       HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+       HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:3)
+       HTMLVIEWLINE("        </font></td>")
+       HTMLVIEWLINE("  </tr>") 
+
+     IF CPWORKCARD NOTE:TEXT:4<>" "
+      THEN
+       HTMLVIEWLINE("  <tr>")
+       HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+       HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+       HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:4)
+       HTMLVIEWLINE("        </font></td>")
+       HTMLVIEWLINE("  </tr>") 
+
+     IF CPWORKCARD NOTE:TEXT:5<>" "
+      THEN
+       HTMLVIEWLINE("  <tr>")
+       HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+       HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+       HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:5)
+       HTMLVIEWLINE("        </font></td>")
+       HTMLVIEWLINE("  </tr>") 
+
+      IF CPWORKCARD NOTE:TEXT:6<>" "
+       THEN
+        HTMLVIEWLINE("  <tr>")
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+        HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:6)
+        HTMLVIEWLINE("        </font></td>")
+        HTMLVIEWLINE("  </tr>") 
+
+      IF CPWORKCARD NOTE:TEXT:7<>" "
+       THEN
+        HTMLVIEWLINE("  <tr>")
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+        HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:7)
+        HTMLVIEWLINE("        </font></td>")
+        HTMLVIEWLINE("  </tr>") 
+
+      IF CPWORKCARD NOTE:TEXT:8<>" "
+       THEN
+        HTMLVIEWLINE("  <tr>")
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+        HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:8)
+        HTMLVIEWLINE("        </font></td>")
+        HTMLVIEWLINE("  </tr>") 
+
+      IF CPWORKCARD NOTE:TEXT:9<>" "
+       THEN
+        HTMLVIEWLINE("  <tr>")
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+        HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:9)
+        HTMLVIEWLINE("        </font></td>")
+        HTMLVIEWLINE("  </tr>") 
+
+      IF CPWORKCARD NOTE:TEXT:10<>" "
+       THEN
+        HTMLVIEWLINE("  <tr>")
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+        HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:10)
+        HTMLVIEWLINE("        </font></td>")
+        HTMLVIEWLINE("  </tr>") 
+ 
+      IF CPWORKCARD NOTE:TEXT:11<>" "
+       THEN
+        HTMLVIEWLINE("  <tr>")
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+        HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:11)
+        HTMLVIEWLINE("        </font></td>")
+        HTMLVIEWLINE("  </tr>") 
+
+      IF CPWORKCARD NOTE:TEXT:12<>" "
+       THEN
+        HTMLVIEWLINE("  <tr>")
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+        HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:12)
+        HTMLVIEWLINE("        </font></td>")
+        HTMLVIEWLINE("  </tr>") 
+
+      IF CPWORKCARD NOTE:TEXT:13<>" "
+       THEN
+        HTMLVIEWLINE("  <tr>")
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+        HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:13)
+        HTMLVIEWLINE("        </font></td>")
+        HTMLVIEWLINE("  </tr>") 
+
+      IF CPWORKCARD NOTE:TEXT:14<>" "
+       THEN
+        HTMLVIEWLINE("  <tr>")
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+        HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:14)
+        HTMLVIEWLINE("        </font></td>")
+        HTMLVIEWLINE("  </tr>") 
+
+      IF CPWORKCARD NOTE:TEXT:15<>" "
+       THEN
+        HTMLVIEWLINE("  <tr>")
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>"  )
+        HTMLVIEWLINE("    <td  width=13%><font size=4></font></td>")
+        HTMLVIEWLINE("    <td  width=87%><font size=4>   "  +CPWORKCARD NOTE:TEXT:15)
+        HTMLVIEWLINE("        </font></td>")
+        HTMLVIEWLINE("  </tr>") 
+
+
+   END
+ END
+
+
+
+ HTMLVIEWLINE("</table>")
+
+ HTMLVIEWLINE("</body>")
+ HTMLVIEWDISPLAY
+END
+
+TOTAL
+END
+
+
+
+
+
